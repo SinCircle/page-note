@@ -10,12 +10,13 @@
   min-width: 60px;
   min-height: 36px;
   width: 300px;
-  height: 200px;
+  height: 74px;
   display: flex;
   flex-direction: column;
   opacity: 0;
   transform: scale(0.85) translateY(12px);
   animation: pagenote-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transition: width 0.15s ease, height 0.15s ease, left 0.15s ease;
 }
 
 @keyframes pagenote-enter {
@@ -63,7 +64,7 @@
 
   border: 1px solid #e0dbd0;
   border-radius: 6px;
-  overflow: hidden;   /* 禁止滚动条；由 autoGrowHeight 自动撑高 */
+  overflow: clip;     /* 视觉裁剪但不创建滚动容器，防止浏览器修改 scrollTop 导致抖动 */
   outline: none;
   cursor: text;
   white-space: pre-wrap;
@@ -207,12 +208,15 @@
   opacity: 1;
 }
 
-/* 拖拽 / resize 中禁止文字选中 */
+/* 拖拽 / resize 中禁止文字选中，并关闭尺寸过渡以保持手感 */
 .pagenote-dragging {
   user-select: none !important;
 }
 .pagenote-dragging * {
   user-select: none !important;
+}
+.pagenote-dragging .pagenote-sticky {
+  transition: none !important;
 }
 
 /* =====================
@@ -235,8 +239,8 @@
   height: 100%;
 }
 
-/* 单行模式：把手条位置微调，紧贴顶部 1px */
+/* 单行模式：把手条位置微调，紧贴顶部 2px */
 .pagenote-sticky.pagenote-singleline .pagenote-drag-handle::after {
-  top: 1px;
+  top: 2px;
   transform: translateX(-50%);
 }

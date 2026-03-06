@@ -24,11 +24,11 @@
     const style = document.createElement('style');
     style.id = 'pagenote-inpage-style';
     style.textContent = `
-      .pagenote-sticky{position:absolute;z-index:2147483640;min-width:60px;min-height:36px;width:300px;height:200px;display:flex;flex-direction:column;opacity:0;transform:scale(0.85) translateY(12px);animation:pagenote-enter .3s cubic-bezier(.22,1,.36,1) forwards}
+      .pagenote-sticky{position:absolute;z-index:2147483640;min-width:60px;min-height:36px;width:300px;height:40px;display:flex;flex-direction:column;opacity:0;transform:scale(0.85) translateY(12px);animation:pagenote-enter .3s cubic-bezier(.22,1,.36,1) forwards;transition:width .15s ease,height .15s ease,left .15s ease}
       @keyframes pagenote-enter{to{opacity:1;transform:scale(1) translateY(0)}}
       .pagenote-sticky.pagenote-removing{animation:pagenote-exit .25s cubic-bezier(.55,.06,.68,.19) forwards}
-      @keyframes pagenote-exit{from{opacity:1;transform:scale(1) translateY(0)}to{opacity:0;transform:scale(0.8) translateY(16px)}}
-      .pagenote-editor{box-sizing:border-box;width:100%;height:100%;padding:14px 18px;font-family:'Caveat','Long Cang',cursive;font-size:22px;line-height:32px;color:#2c2c2c;background-color:#fffef5;background-image:linear-gradient(to bottom,transparent 31px,#e5e0d2 31px,#e5e0d2 32px);background-size:100% 32px;background-position-y:14px;background-attachment:local;border:1px solid #e0dbd0;border-radius:6px;overflow:hidden;outline:none;cursor:text;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 5px rgba(0,0,0,.07)}
+      @keyframes pagenote-exit{from{opacity:1;transform:scale(1) translateY(0)}to{opacity:0;height:40px;transform:scale(0.8) translateY(16px)}}
+      .pagenote-editor{box-sizing:border-box;width:100%;height:100%;padding:14px 18px;font-family:'Caveat','Long Cang',cursive;font-size:22px;line-height:32px;color:#2c2c2c;background-color:#fffef5;background-image:linear-gradient(to bottom,transparent 31px,#e5e0d2 31px,#e5e0d2 32px);background-size:100% 32px;background-position-y:14px;background-attachment:local;border:1px solid #e0dbd0;border-radius:6px;overflow:clip;outline:none;cursor:text;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 5px rgba(0,0,0,.07)}
       .pagenote-editor:empty::before{content:attr(data-placeholder);color:#c0b9a8;font-style:italic;pointer-events:none}
       .pagenote-drag-handle{position:absolute;top:0;left:0;right:0;height:18px;cursor:grab;z-index:3;opacity:0;transition:opacity .2s ease}
       .pagenote-drag-handle::after{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:40px;height:5px;background:#d5d0c4;border-radius:3px}
@@ -40,9 +40,10 @@
       .pagenote-resize-br{position:absolute;bottom:0;right:0;width:20px;height:20px;cursor:nwse-resize;z-index:3;opacity:0;transition:opacity .2s ease;border-radius:0 0 6px 0;overflow:hidden}
       .pagenote-resize-br svg{position:absolute;bottom:3px;right:3px;width:10px;height:10px;pointer-events:none}
       .pagenote-sticky:hover .pagenote-drag-handle,.pagenote-sticky:hover .pagenote-close,.pagenote-sticky:hover .pagenote-pin,.pagenote-sticky:hover .pagenote-resize-br{opacity:1}
+      .pagenote-dragging .pagenote-sticky{transition:none !important}
       .pagenote-sticky.pagenote-singleline{overflow:visible}
       .pagenote-sticky.pagenote-singleline .pagenote-editor{padding:0 12px;background-image:none;white-space:nowrap;overflow:visible;display:flex;align-items:center;justify-content:center;text-align:center}
-      .pagenote-sticky.pagenote-singleline .pagenote-drag-handle::after{top:1px;transform:translateX(-50%)}
+      .pagenote-sticky.pagenote-singleline .pagenote-drag-handle::after{top:2px;transform:translateX(-50%)}
     `;
     document.head.appendChild(style);
   }
@@ -215,7 +216,12 @@
 
     initDrag(note, handle);
     initResize(note, resizeBR);
-    editor.addEventListener('input', () => { autoGrowHeight(note, editor); debounceSave(); });
+    editor.addEventListener('input', () => {
+      // contenteditable 删空后会留下孤立 <br>，导致 :empty 不匹配、再退格才显示 placeholder
+      if (editor.innerHTML === '<br>') editor.innerHTML = '';
+      autoGrowHeight(note, editor);
+      debounceSave();
+    });
     // re-check single-line mode on restore
     autoGrowHeight(note, editor);
   }
@@ -312,7 +318,7 @@
      尺寸常量
      ===================== */
   const SINGLE_LINE_H = 36;   // 单行模式阈值高度(px)
-  const MULTI_LINE_H  = 80;   // 多行模式最小高度(px)
+  const MULTI_LINE_H  = 94;   // 多行模式最小高度(px)：PAD_V + LINE_H + PAD_V*2
   const MIN_W = 60;            // 最小宽度(px)
   const LINE_H = 32;           // 行高(px)
   const PAD_V = 14;            // 上下留白(px)
@@ -337,13 +343,15 @@
       return;
     }
 
-    // overflow:hidden 下 scrollHeight 即为内容自然高度（含上下 padding），无需临时改 height
+    // scrollHeight 含上下 padding，是内容的自然高度
     const naturalH = editor.scrollHeight;
 
-    // 若当前便签比内容自然高度高出超过一行 → 用户刻意留了空间，不收缩
+    // 若当前便签比自然高度高出超过一行 → 用户刻意留了空间，不收缩
     if (curH - naturalH > LINE_H + 4) return;
 
-    const targetH = Math.max(MULTI_LINE_H, naturalH);
+    // 扩展时：底部额外留 PAD_V 使上下空余对称；收缩时：直接对齐自然高度
+    const growing = naturalH > curH;
+    const targetH = Math.max(MULTI_LINE_H, growing ? naturalH + PAD_V : naturalH);
     if (Math.abs(targetH - curH) > 2) {
       note.style.height = targetH + 'px';
     }
@@ -358,10 +366,16 @@
     const textW = editor.offsetWidth; // 含左右 padding
     editor.style.width = '';          // 还原 CSS width: 100%
 
-    const noteW = note.offsetWidth;
+    // 用 getBoundingClientRect 获取当前视觉位置（正确处理 transition 进行中的情况）
+    const rect = note.getBoundingClientRect();
+    const isFixed = note.classList.contains('pagenote-fixed');
+    const scrollX = isFixed ? 0 : (window.scrollX || document.documentElement.scrollLeft);
+    const visualLeft = rect.left + scrollX;  // 页面坐标系下的左边位置
+    const visualW = rect.width;
+
     const targetW = Math.max(MIN_W, textW);
-    if (Math.abs(targetW - noteW) > 1) {
-      const centerX = parseInt(note.style.left, 10) + noteW / 2;
+    if (Math.abs(targetW - visualW) > 1) {
+      const centerX = visualLeft + visualW / 2;
       note.style.width = targetW + 'px';
       note.style.left = Math.round(centerX - targetW / 2) + 'px';
     }
