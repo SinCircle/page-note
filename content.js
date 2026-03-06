@@ -32,12 +32,16 @@
       .pagenote-editor:empty::before{content:attr(data-placeholder);color:#c0b9a8;font-style:italic;pointer-events:none}
       .pagenote-drag-handle{position:absolute;top:0;left:0;right:0;height:18px;cursor:grab;z-index:3;opacity:0;transition:opacity .2s ease}
       .pagenote-drag-handle::after{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:40px;height:5px;background:#d5d0c4;border-radius:3px}
+      .pagenote-sticky.pagenote-fixed{position:fixed}
+      .pagenote-pin{position:absolute;top:-5px;right:15px;width:13px;height:13px;background:#e8b93d;border:2px solid #fffef5;border-radius:50%;cursor:pointer;opacity:0;transition:opacity .2s ease,transform .15s ease,background .15s ease;z-index:3;padding:0;outline:none}
+      .pagenote-pin.pagenote-pinned{background:#5b9bd5}
+      .pagenote-pin:hover{transform:scale(1.3)}
       .pagenote-close{position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#e85d5d;border:2px solid #fffef5;border-radius:50%;cursor:pointer;opacity:0;transition:opacity .2s ease,transform .15s ease;z-index:3;padding:0;outline:none}
       .pagenote-resize-br{position:absolute;bottom:0;right:0;width:20px;height:20px;cursor:nwse-resize;z-index:3;opacity:0;transition:opacity .2s ease;border-radius:0 0 6px 0;overflow:hidden}
       .pagenote-resize-br svg{position:absolute;bottom:3px;right:3px;width:10px;height:10px;pointer-events:none}
       .pagenote-resize-bl{position:absolute;bottom:0;left:0;width:20px;height:20px;cursor:nesw-resize;z-index:3;opacity:0;transition:opacity .2s ease;border-radius:0 0 0 6px;overflow:hidden}
       .pagenote-resize-bl svg{position:absolute;bottom:3px;left:3px;width:10px;height:10px;pointer-events:none;transform:scaleX(-1)}
-      .pagenote-sticky:hover .pagenote-drag-handle,.pagenote-sticky:hover .pagenote-close,.pagenote-sticky:hover .pagenote-resize-br,.pagenote-sticky:hover .pagenote-resize-bl{opacity:1}
+      .pagenote-sticky:hover .pagenote-drag-handle,.pagenote-sticky:hover .pagenote-close,.pagenote-sticky:hover .pagenote-pin,.pagenote-sticky:hover .pagenote-resize-br,.pagenote-sticky:hover .pagenote-resize-bl{opacity:1}
     `;
     document.head.appendChild(style);
   }
@@ -63,6 +67,7 @@
       width: n.style.width,
       height: n.style.height,
       html: n.querySelector('.pagenote-editor').innerHTML,
+      pinned: n.classList.contains('pagenote-fixed'),
     }));
   }
 
@@ -130,6 +135,39 @@
     const handle = document.createElement('div');
     handle.className = 'pagenote-drag-handle';
 
+    // 定位切换按钮 (小黄点)
+    const pinBtn = document.createElement('button');
+    pinBtn.className = 'pagenote-pin';
+    pinBtn.title = '切换：固定在屏幕 / 跟随页面';
+    if (saved && saved.pinned) {
+      pinBtn.classList.add('pagenote-pinned');
+      note.classList.add('pagenote-fixed');
+      // 固定模式：saved 坐标即为视口坐标，直接使用
+    }
+    pinBtn.addEventListener('click', () => {
+      const isFixed = note.classList.contains('pagenote-fixed');
+      const scrollX = window.scrollX || document.documentElement.scrollLeft;
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
+      const curLeft = parseInt(note.style.left, 10) || 0;
+      const curTop = parseInt(note.style.top, 10) || 0;
+      if (isFixed) {
+        // fixed → absolute：视口坐标 → 页面坐标
+        note.classList.remove('pagenote-fixed');
+        pinBtn.classList.remove('pagenote-pinned');
+        note.style.left = (curLeft + scrollX) + 'px';
+        note.style.top = (curTop + scrollY) + 'px';
+        pinBtn.title = '切换：固定在屏幕 / 跟随页面';
+      } else {
+        // absolute → fixed：页面坐标 → 视口坐标
+        note.classList.add('pagenote-fixed');
+        pinBtn.classList.add('pagenote-pinned');
+        note.style.left = (curLeft - scrollX) + 'px';
+        note.style.top = (curTop - scrollY) + 'px';
+        pinBtn.title = '切换：固定在屏幕 / 跟随页面';
+      }
+      saveNotes();
+    });
+
     // 关闭按钮 (小红点)
     const closeBtn = document.createElement('button');
     closeBtn.className = 'pagenote-close';
@@ -171,6 +209,7 @@
       '<line x1="9" y1="5" x2="5" y2="9" stroke="#c5bfb0" stroke-width="1.2" stroke-linecap="round"/></svg>';
 
     note.appendChild(handle);
+    note.appendChild(pinBtn);
     note.appendChild(closeBtn);
     note.appendChild(editor);
     note.appendChild(resizeBR);
@@ -192,13 +231,15 @@
      ===================== */
   function initDrag(note, handle) {
     let dragging = false;
+    let useClient = false;
     let startMouseX, startMouseY, startLeft, startTop;
 
     handle.addEventListener('mousedown', (e) => {
       e.preventDefault();
       dragging = true;
-      startMouseX = e.pageX;
-      startMouseY = e.pageY;
+      useClient = note.classList.contains('pagenote-fixed');
+      startMouseX = useClient ? e.clientX : e.pageX;
+      startMouseY = useClient ? e.clientY : e.pageY;
       startLeft = parseInt(note.style.left, 10) || 0;
       startTop = parseInt(note.style.top, 10) || 0;
       document.body.classList.add('pagenote-dragging');
@@ -206,8 +247,10 @@
 
     document.addEventListener('mousemove', (e) => {
       if (!dragging) return;
-      note.style.left = (startLeft + e.pageX - startMouseX) + 'px';
-      note.style.top = (startTop + e.pageY - startMouseY) + 'px';
+      const mx = useClient ? e.clientX : e.pageX;
+      const my = useClient ? e.clientY : e.pageY;
+      note.style.left = (startLeft + mx - startMouseX) + 'px';
+      note.style.top = (startTop + my - startMouseY) + 'px';
     });
 
     document.addEventListener('mouseup', () => {
