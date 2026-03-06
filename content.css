@@ -7,8 +7,8 @@
 .pagenote-sticky {
   position: absolute;
   z-index: 2147483640;
-  min-width: 140px;
-  min-height: 80px;
+  min-width: 60px;
+  min-height: 36px;
   width: 300px;
   height: 200px;
   display: flex;
@@ -63,7 +63,7 @@
 
   border: 1px solid #e0dbd0;
   border-radius: 6px;
-  overflow: auto;
+  overflow: hidden;   /* 禁止滚动条；由 autoGrowHeight 自动撑高 */
   outline: none;
   cursor: text;
   white-space: pre-wrap;
@@ -203,33 +203,7 @@
   pointer-events: none;
 }
 
-/* 自定义 resize 把手 - 左下角斜纹 */
-.pagenote-resize-bl {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 20px;
-  height: 20px;
-  cursor: nesw-resize;
-  z-index: 3;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  border-radius: 0 0 0 6px;
-  overflow: hidden;
-}
-
-.pagenote-resize-bl svg {
-  position: absolute;
-  bottom: 3px;
-  left: 3px;
-  width: 10px;
-  height: 10px;
-  pointer-events: none;
-  transform: scaleX(-1);
-}
-
-.pagenote-sticky:hover .pagenote-resize-br,
-.pagenote-sticky:hover .pagenote-resize-bl {
+.pagenote-sticky:hover .pagenote-resize-br {
   opacity: 1;
 }
 
@@ -239,4 +213,30 @@
 }
 .pagenote-dragging * {
   user-select: none !important;
+}
+
+/* =====================
+   单行模式：极小尺寸，无横线，文本居中，内容水平溢出
+   ===================== */
+.pagenote-sticky.pagenote-singleline {
+  min-height: 36px;
+  overflow: visible;
+}
+
+.pagenote-sticky.pagenote-singleline .pagenote-editor {
+  padding: 0 12px;
+  background-image: none;          /* 去掉横线 */
+  white-space: nowrap;              /* 不换行，向两侧延伸 */
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+}
+
+/* 单行模式：把手条位置微调，紧贴顶部 1px */
+.pagenote-sticky.pagenote-singleline .pagenote-drag-handle::after {
+  top: 1px;
+  transform: translateX(-50%);
 }

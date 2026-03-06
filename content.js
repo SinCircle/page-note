@@ -24,11 +24,11 @@
     const style = document.createElement('style');
     style.id = 'pagenote-inpage-style';
     style.textContent = `
-      .pagenote-sticky{position:absolute;z-index:2147483640;min-width:140px;min-height:80px;width:300px;height:200px;display:flex;flex-direction:column;opacity:0;transform:scale(0.85) translateY(12px);animation:pagenote-enter .3s cubic-bezier(.22,1,.36,1) forwards}
+      .pagenote-sticky{position:absolute;z-index:2147483640;min-width:60px;min-height:36px;width:300px;height:200px;display:flex;flex-direction:column;opacity:0;transform:scale(0.85) translateY(12px);animation:pagenote-enter .3s cubic-bezier(.22,1,.36,1) forwards}
       @keyframes pagenote-enter{to{opacity:1;transform:scale(1) translateY(0)}}
       .pagenote-sticky.pagenote-removing{animation:pagenote-exit .25s cubic-bezier(.55,.06,.68,.19) forwards}
       @keyframes pagenote-exit{from{opacity:1;transform:scale(1) translateY(0)}to{opacity:0;transform:scale(0.8) translateY(16px)}}
-      .pagenote-editor{box-sizing:border-box;width:100%;height:100%;padding:14px 18px;font-family:'Caveat','Long Cang',cursive;font-size:22px;line-height:32px;color:#2c2c2c;background-color:#fffef5;background-image:linear-gradient(to bottom,transparent 31px,#e5e0d2 31px,#e5e0d2 32px);background-size:100% 32px;background-position-y:14px;background-attachment:local;border:1px solid #e0dbd0;border-radius:6px;overflow:auto;outline:none;cursor:text;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 5px rgba(0,0,0,.07)}
+      .pagenote-editor{box-sizing:border-box;width:100%;height:100%;padding:14px 18px;font-family:'Caveat','Long Cang',cursive;font-size:22px;line-height:32px;color:#2c2c2c;background-color:#fffef5;background-image:linear-gradient(to bottom,transparent 31px,#e5e0d2 31px,#e5e0d2 32px);background-size:100% 32px;background-position-y:14px;background-attachment:local;border:1px solid #e0dbd0;border-radius:6px;overflow:hidden;outline:none;cursor:text;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 5px rgba(0,0,0,.07)}
       .pagenote-editor:empty::before{content:attr(data-placeholder);color:#c0b9a8;font-style:italic;pointer-events:none}
       .pagenote-drag-handle{position:absolute;top:0;left:0;right:0;height:18px;cursor:grab;z-index:3;opacity:0;transition:opacity .2s ease}
       .pagenote-drag-handle::after{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:40px;height:5px;background:#d5d0c4;border-radius:3px}
@@ -39,9 +39,10 @@
       .pagenote-close{position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#e85d5d;border:2px solid #fffef5;border-radius:50%;cursor:pointer;opacity:0;transition:opacity .2s ease,transform .15s ease;z-index:3;padding:0;outline:none}
       .pagenote-resize-br{position:absolute;bottom:0;right:0;width:20px;height:20px;cursor:nwse-resize;z-index:3;opacity:0;transition:opacity .2s ease;border-radius:0 0 6px 0;overflow:hidden}
       .pagenote-resize-br svg{position:absolute;bottom:3px;right:3px;width:10px;height:10px;pointer-events:none}
-      .pagenote-resize-bl{position:absolute;bottom:0;left:0;width:20px;height:20px;cursor:nesw-resize;z-index:3;opacity:0;transition:opacity .2s ease;border-radius:0 0 0 6px;overflow:hidden}
-      .pagenote-resize-bl svg{position:absolute;bottom:3px;left:3px;width:10px;height:10px;pointer-events:none;transform:scaleX(-1)}
-      .pagenote-sticky:hover .pagenote-drag-handle,.pagenote-sticky:hover .pagenote-close,.pagenote-sticky:hover .pagenote-pin,.pagenote-sticky:hover .pagenote-resize-br,.pagenote-sticky:hover .pagenote-resize-bl{opacity:1}
+      .pagenote-sticky:hover .pagenote-drag-handle,.pagenote-sticky:hover .pagenote-close,.pagenote-sticky:hover .pagenote-pin,.pagenote-sticky:hover .pagenote-resize-br{opacity:1}
+      .pagenote-sticky.pagenote-singleline{overflow:visible}
+      .pagenote-sticky.pagenote-singleline .pagenote-editor{padding:0 12px;background-image:none;white-space:nowrap;overflow:visible;display:flex;align-items:center;justify-content:center;text-align:center}
+      .pagenote-sticky.pagenote-singleline .pagenote-drag-handle::after{top:1px;transform:translateX(-50%)}
     `;
     document.head.appendChild(style);
   }
@@ -191,7 +192,6 @@
       const text = (e.clipboardData || window.clipboardData).getData('text');
       document.execCommand('insertText', false, text);
     });
-    editor.addEventListener('input', debounceSave);
     if (saved && saved.html) editor.innerHTML = saved.html;
 
     // Resize 把手 - 右下角 (SVG 斜纹)
@@ -201,19 +201,11 @@
       '<svg viewBox="0 0 10 10"><line x1="9" y1="1" x2="1" y2="9" stroke="#c5bfb0" stroke-width="1.2" stroke-linecap="round"/>' +
       '<line x1="9" y1="5" x2="5" y2="9" stroke="#c5bfb0" stroke-width="1.2" stroke-linecap="round"/></svg>';
 
-    // Resize 把手 - 左下角
-    const resizeBL = document.createElement('div');
-    resizeBL.className = 'pagenote-resize-bl';
-    resizeBL.innerHTML =
-      '<svg viewBox="0 0 10 10"><line x1="9" y1="1" x2="1" y2="9" stroke="#c5bfb0" stroke-width="1.2" stroke-linecap="round"/>' +
-      '<line x1="9" y1="5" x2="5" y2="9" stroke="#c5bfb0" stroke-width="1.2" stroke-linecap="round"/></svg>';
-
     note.appendChild(handle);
     note.appendChild(pinBtn);
     note.appendChild(closeBtn);
     note.appendChild(editor);
     note.appendChild(resizeBR);
-    note.appendChild(resizeBL);
     document.body.appendChild(note);
 
     if (!saved) {
@@ -222,8 +214,10 @@
     }
 
     initDrag(note, handle);
-    initResize(note, resizeBR, 'br');
-    initResize(note, resizeBL, 'bl');
+    initResize(note, resizeBR);
+    editor.addEventListener('input', () => { autoGrowHeight(note, editor); debounceSave(); });
+    // re-check single-line mode on restore
+    autoGrowHeight(note, editor);
   }
 
   /* =====================
@@ -263,11 +257,11 @@
   }
 
   /* =====================
-     自定义 resize（支持左下角和右下角）
+     自定义 resize（仅右下角，左右对称延伸）
      ===================== */
-  function initResize(note, resizeHandle, corner) {
+  function initResize(note, resizeHandle) {
     let resizing = false;
-    let startX, startY, startW, startH, startLeft;
+    let startX, startY, startW, startH, startCenterX;
 
     resizeHandle.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -277,26 +271,32 @@
       startY = e.clientY;
       startW = note.offsetWidth;
       startH = note.offsetHeight;
-      startLeft = parseInt(note.style.left, 10) || 0;
+      const startLeft = parseInt(note.style.left, 10) || 0;
+      startCenterX = startLeft + startW / 2;
       document.body.classList.add('pagenote-dragging');
     });
 
     document.addEventListener('mousemove', (e) => {
       if (!resizing) return;
+      // 高度：仅向下拖动改变
       const dy = e.clientY - startY;
-      const newH = Math.max(80, startH + dy);
+      const newH = Math.max(SINGLE_LINE_H, startH + dy);
       note.style.height = newH + 'px';
+      applySingleLineMode(note, newH);
 
-      if (corner === 'br') {
-        const newW = Math.max(140, startW + (e.clientX - startX));
-        note.style.width = newW + 'px';
-      } else {
-        // 左下角：向左拖动增大宽度，同时调整 left
-        const dx = startX - e.clientX;
-        const newW = Math.max(140, startW + dx);
-        note.style.width = newW + 'px';
-        note.style.left = (startLeft - (newW - startW)) + 'px';
+      // 宽度：右侧拖动，左侧镜像，中心点不动
+      // 最小宽度：单行模式下不得低于文本所需宽度（含左右 padding）
+      const editor = note.querySelector('.pagenote-editor');
+      let minW = MIN_W;
+      if (note.classList.contains('pagenote-singleline') && editor) {
+        editor.style.width = 'max-content';
+        minW = Math.max(MIN_W, editor.offsetWidth);
+        editor.style.width = '';
       }
+      const dx = e.clientX - startX;
+      const newW = Math.max(minW, startW + dx * 2);
+      note.style.width = newW + 'px';
+      note.style.left = Math.round(startCenterX - newW / 2) + 'px';
     });
 
     document.addEventListener('mouseup', () => {
@@ -306,6 +306,65 @@
         saveNotes();
       }
     });
+  }
+
+  /* =====================
+     尺寸常量
+     ===================== */
+  const SINGLE_LINE_H = 36;   // 单行模式阈值高度(px)
+  const MULTI_LINE_H  = 80;   // 多行模式最小高度(px)
+  const MIN_W = 60;            // 最小宽度(px)
+  const LINE_H = 32;           // 行高(px)
+  const PAD_V = 14;            // 上下留白(px)
+
+  function applySingleLineMode(note, h) {
+    if (h <= SINGLE_LINE_H) {
+      note.classList.add('pagenote-singleline');
+    } else {
+      note.classList.remove('pagenote-singleline');
+    }
+  }
+
+  /* =====================
+     自动增减高度（内容驱动）
+     ===================== */
+  function autoGrowHeight(note, editor) {
+    const curH = note.offsetHeight;
+    applySingleLineMode(note, curH);
+
+    if (note.classList.contains('pagenote-singleline')) {
+      autoGrowWidth(note, editor);
+      return;
+    }
+
+    // overflow:hidden 下 scrollHeight 即为内容自然高度（含上下 padding），无需临时改 height
+    const naturalH = editor.scrollHeight;
+
+    // 若当前便签比内容自然高度高出超过一行 → 用户刻意留了空间，不收缩
+    if (curH - naturalH > LINE_H + 4) return;
+
+    const targetH = Math.max(MULTI_LINE_H, naturalH);
+    if (Math.abs(targetH - curH) > 2) {
+      note.style.height = targetH + 'px';
+    }
+  }
+
+  /* =====================
+     单行模式：自动横向扩宽（两侧对称）
+     ===================== */
+  function autoGrowWidth(note, editor) {
+    // 临时设为 max-content 以测量文本实际所需宽度
+    editor.style.width = 'max-content';
+    const textW = editor.offsetWidth; // 含左右 padding
+    editor.style.width = '';          // 还原 CSS width: 100%
+
+    const noteW = note.offsetWidth;
+    const targetW = Math.max(MIN_W, textW);
+    if (Math.abs(targetW - noteW) > 1) {
+      const centerX = parseInt(note.style.left, 10) + noteW / 2;
+      note.style.width = targetW + 'px';
+      note.style.left = Math.round(centerX - targetW / 2) + 'px';
+    }
   }
 
   function placeCaretAtEnd(element) {
