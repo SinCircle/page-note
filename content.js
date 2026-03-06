@@ -43,6 +43,62 @@
   }
 
   /* =====================
+     持久化：存储 key 生成 & 读写
+     ===================== */
+  function storageKey() {
+    return 'pagenote:' + location.href.split('#')[0];
+  }
+
+  function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  /** 收集当前页面所有便签数据 */
+  function collectNotes() {
+    const notes = document.querySelectorAll('.pagenote-sticky');
+    return Array.from(notes).map(n => ({
+      id: n.dataset.noteId,
+      left: n.style.left,
+      top: n.style.top,
+      width: n.style.width,
+      height: n.style.height,
+      html: n.querySelector('.pagenote-editor').innerHTML,
+    }));
+  }
+
+  /** 保存所有便签到 storage */
+  function saveNotes() {
+    try {
+      const data = collectNotes();
+      chrome.storage.local.set({ [storageKey()]: data });
+    } catch (_e) { /* storage 不可用时静默忽略 */ }
+  }
+
+  /** 防抖保存 */
+  let _saveTimer = null;
+  function debounceSave() {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(saveNotes, 400);
+  }
+
+  /** 页面加载时恢复便签 */
+  function restoreNotes() {
+    try {
+      const key = storageKey();
+      chrome.storage.local.get(key, (result) => {
+        const list = result[key];
+        if (!Array.isArray(list) || list.length === 0) return;
+        list.forEach(data => {
+          createNote(null, null, data);
+        });
+      });
+    } catch (_e) { /* storage 不可用时静默忽略 */ }
+  }
+
+  // 页面加载后恢复
+  restoreNotes();
+
+  /* =====================
      消息监听
      ===================== */
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -55,17 +111,20 @@
   /* =====================
      创建便签
      ===================== */
-  function createNote(x, y) {
+  function createNote(x, y, saved) {
     const scrollX = window.scrollX || document.documentElement.scrollLeft;
     const scrollY = window.scrollY || document.documentElement.scrollTop;
-    const posX = (x ?? (window.innerWidth / 2 - 150)) + scrollX;
-    const posY = (y ?? (window.innerHeight / 3)) + scrollY;
+    const posX = saved ? parseInt(saved.left, 10) : ((x ?? (window.innerWidth / 2 - 150)) + scrollX);
+    const posY = saved ? parseInt(saved.top, 10) : ((y ?? (window.innerHeight / 3)) + scrollY);
 
     // 容器
     const note = document.createElement('div');
     note.className = 'pagenote-sticky';
+    note.dataset.noteId = saved ? saved.id : generateId();
     note.style.left = posX + 'px';
     note.style.top = posY + 'px';
+    if (saved && saved.width) note.style.width = saved.width;
+    if (saved && saved.height) note.style.height = saved.height;
 
     // 拖拽把手
     const handle = document.createElement('div');
@@ -77,7 +136,10 @@
     closeBtn.title = '删除便签';
     closeBtn.addEventListener('click', () => {
       note.classList.add('pagenote-removing');
-      note.addEventListener('animationend', () => note.remove(), { once: true });
+      note.addEventListener('animationend', () => {
+        note.remove();
+        saveNotes();
+      }, { once: true });
     });
 
     // 编辑区域（不用 textarea，提升 Edge 自带网页截图兼容性）
@@ -91,6 +153,8 @@
       const text = (e.clipboardData || window.clipboardData).getData('text');
       document.execCommand('insertText', false, text);
     });
+    editor.addEventListener('input', debounceSave);
+    if (saved && saved.html) editor.innerHTML = saved.html;
 
     // Resize 把手 - 右下角 (SVG 斜纹)
     const resizeBR = document.createElement('div');
@@ -113,7 +177,10 @@
     note.appendChild(resizeBL);
     document.body.appendChild(note);
 
-    setTimeout(() => placeCaretAtEnd(editor), 50);
+    if (!saved) {
+      setTimeout(() => placeCaretAtEnd(editor), 50);
+      debounceSave();
+    }
 
     initDrag(note, handle);
     initResize(note, resizeBR, 'br');
@@ -147,6 +214,7 @@
       if (dragging) {
         dragging = false;
         document.body.classList.remove('pagenote-dragging');
+        saveNotes();
       }
     });
   }
@@ -192,6 +260,7 @@
       if (resizing) {
         resizing = false;
         document.body.classList.remove('pagenote-dragging');
+        saveNotes();
       }
     });
   }

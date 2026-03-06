@@ -3,7 +3,7 @@
   "name": "PageNote - 页面便签",
   "version": "1.0.1",
   "description": "在网页上放置可拖动的手写便签",
-  "permissions": ["activeTab"],
+  "permissions": ["activeTab", "storage"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_title": "添加便签",
