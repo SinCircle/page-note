@@ -44,6 +44,9 @@
       .pagenote-sticky.pagenote-singleline{overflow:visible}
       .pagenote-sticky.pagenote-singleline .pagenote-editor{padding:0 12px;background-image:none;white-space:nowrap;overflow:visible;display:flex;align-items:center;justify-content:center;text-align:center}
       .pagenote-sticky.pagenote-singleline .pagenote-drag-handle::after{top:2px;transform:translateX(-50%)}
+      .pagenote-stats{position:absolute;top:3px;left:8px;font-size:10px;font-family:monospace,sans-serif;color:#c0b9a8;pointer-events:none;z-index:2;opacity:0;transition:opacity .2s ease;user-select:none;line-height:1}
+      .pagenote-sticky:hover .pagenote-stats{opacity:1}
+      .pagenote-sticky.pagenote-singleline .pagenote-stats{display:none}
     `;
     document.head.appendChild(style);
   }
@@ -202,11 +205,16 @@
       '<svg viewBox="0 0 10 10"><line x1="9" y1="1" x2="1" y2="9" stroke="#c5bfb0" stroke-width="1.2" stroke-linecap="round"/>' +
       '<line x1="9" y1="5" x2="5" y2="9" stroke="#c5bfb0" stroke-width="1.2" stroke-linecap="round"/></svg>';
 
+    // 统计信息（多行模式左上角）
+    const statsEl = document.createElement('div');
+    statsEl.className = 'pagenote-stats';
+
     note.appendChild(handle);
     note.appendChild(pinBtn);
     note.appendChild(closeBtn);
     note.appendChild(editor);
     note.appendChild(resizeBR);
+    note.appendChild(statsEl);
     document.body.appendChild(note);
 
     if (!saved) {
@@ -220,10 +228,12 @@
       // contenteditable 删空后会留下孤立 <br>，导致 :empty 不匹配、再退格才显示 placeholder
       if (editor.innerHTML === '<br>') editor.innerHTML = '';
       autoGrowHeight(note, editor);
+      updateStats(editor, statsEl);
       debounceSave();
     });
     // re-check single-line mode on restore
     autoGrowHeight(note, editor);
+    updateStats(editor, statsEl);
   }
 
   /* =====================
@@ -379,6 +389,18 @@
       note.style.width = targetW + 'px';
       note.style.left = Math.round(centerX - targetW / 2) + 'px';
     }
+  }
+
+  /* =====================
+     统计字数 / 词数
+     ===================== */
+  function updateStats(editor, statsEl) {
+    const text = editor.innerText || '';
+    // 字数：非空白字符数
+    const charCount = text.replace(/\s/g, '').length;
+    // 词数：每个 CJK 字符各计 1 词，连续非 CJK 非空白序列计 1 词
+    const wordCount = (text.match(/[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7a3]|[^\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7a3\s]+/g) || []).length;
+    statsEl.textContent = wordCount + '|' + charCount;
   }
 
   function placeCaretAtEnd(element) {

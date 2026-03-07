@@ -244,3 +244,27 @@
   top: 2px;
   transform: translateX(-50%);
 }
+
+/* 统计信息 - 多行模式左上角，悬浮显示 */
+.pagenote-stats {
+  position: absolute;
+  top: 3px;
+  left: 8px;
+  font-size: 10px;
+  font-family: monospace, sans-serif;
+  color: #c0b9a8;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  user-select: none;
+  line-height: 1;
+}
+
+.pagenote-sticky:hover .pagenote-stats {
+  opacity: 1;
+}
+
+.pagenote-sticky.pagenote-singleline .pagenote-stats {
+  display: none;
+}
