@@ -24,16 +24,16 @@
     const style = document.createElement('style');
     style.id = 'pagenote-inpage-style';
     style.textContent = `
-      .pagenote-sticky{position:absolute;z-index:2147483640;min-width:60px;min-height:36px;width:300px;height:40px;display:flex;flex-direction:column;opacity:0;transform:scale(0.85) translateY(12px);animation:pagenote-enter .3s cubic-bezier(.22,1,.36,1) forwards;transition:width .15s ease,height .15s ease,left .15s ease}
+      .pagenote-sticky{position:absolute;z-index:2147483640;min-width:110px;min-height:36px;width:300px;height:40px;display:flex;flex-direction:column;opacity:0;transform:scale(0.85) translateY(12px);animation:pagenote-enter .3s cubic-bezier(.22,1,.36,1) forwards;transition:width .15s ease,height .15s ease,left .15s ease}
       @keyframes pagenote-enter{to{opacity:1;transform:scale(1) translateY(0)}}
       .pagenote-sticky.pagenote-removing{animation:pagenote-exit .25s cubic-bezier(.55,.06,.68,.19) forwards}
       @keyframes pagenote-exit{from{opacity:1;transform:scale(1) translateY(0)}to{opacity:0;height:40px;transform:scale(0.8) translateY(16px)}}
       .pagenote-editor{box-sizing:border-box;width:100%;height:100%;padding:14px 18px;font-family:'Caveat','Long Cang',cursive;font-size:22px;line-height:32px;color:#2c2c2c;background-color:#fffef5;background-image:linear-gradient(to bottom,transparent 31px,#e5e0d2 31px,#e5e0d2 32px);background-size:100% 32px;background-position-y:14px;background-attachment:local;border:1px solid #e0dbd0;border-radius:6px;overflow:clip;outline:none;cursor:text;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 5px rgba(0,0,0,.07)}
       .pagenote-editor:empty::before{content:attr(data-placeholder);color:#c0b9a8;font-style:italic;pointer-events:none}
       .pagenote-drag-handle{position:absolute;top:0;left:0;right:0;height:18px;cursor:grab;z-index:3;opacity:0;transition:opacity .2s ease}
-      .pagenote-drag-handle::after{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:40px;height:5px;background:#d5d0c4;border-radius:3px}
+      .pagenote-drag-handle::after{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:40px;max-width:calc(100% - 50px);height:5px;background:#d5d0c4;border-radius:3px}
       .pagenote-sticky.pagenote-fixed{position:fixed}
-      .pagenote-pin{position:absolute;top:-5px;right:15px;width:13px;height:13px;background:#e8b93d;border:2px solid #fffef5;border-radius:50%;cursor:pointer;opacity:0;transition:opacity .2s ease,transform .15s ease,background .15s ease;z-index:3;padding:0;outline:none}
+      .pagenote-pin{position:absolute;top:-5px;right:8px;width:13px;height:13px;background:#e8b93d;border:2px solid #fffef5;border-radius:50%;cursor:pointer;opacity:0;transition:opacity .2s ease,transform .15s ease,background .15s ease;z-index:3;padding:0;outline:none}
       .pagenote-pin.pagenote-pinned{background:#5b9bd5}
       .pagenote-pin:hover{transform:scale(1.3)}
       .pagenote-close{position:absolute;top:-5px;right:-5px;width:13px;height:13px;background:#e85d5d;border:2px solid #fffef5;border-radius:50%;cursor:pointer;opacity:0;transition:opacity .2s ease,transform .15s ease;z-index:3;padding:0;outline:none}
@@ -329,7 +329,7 @@
      ===================== */
   const SINGLE_LINE_H = 36;   // 单行模式阈值高度(px)
   const MULTI_LINE_H  = 94;   // 多行模式最小高度(px)：PAD_V + LINE_H + PAD_V*2
-  const MIN_W = 60;            // 最小宽度(px)
+  const MIN_W = 110;           // 最小宽度(px)
   const LINE_H = 32;           // 行高(px)
   const PAD_V = 14;            // 上下留白(px)
 
